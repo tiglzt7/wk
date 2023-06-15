@@ -112,17 +112,17 @@ def writedf_xlsx(df_dict):
 
 def VC_dupricate(df):
     """
-    品番重複チェック+削除
+    重複チェック+削除
     """
-    df.loc[(df.duplicated(subset=["先品番"], keep=False)) & (df["レベル1"] == 1)]
+    df.loc[(df.duplicated(subset=["先品"], keep=False)) & (df["L1"] == 1)]
     df = df.drop(
-        df[(df.duplicates(subset=["先品番"], keep="False")) & (df["レベル1"] != 1)].index
+        df[(df.duplicates(subset=["先品"], keep="False")) & (df["L1"] != 1)].index
     )
 
     return df
 
 
-def getdf(file_path, dtype={"元品番": str, "先品番": str}):
+def getdf(file_path, dtype={"元品": str, "先品": str}):
     xls = pd.ExcelFile(file_path)
     df = {
         sheet_name: xls.parse(sheet_name, dtype=dtype) for sheet_name in xls.sheet_names
