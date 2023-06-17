@@ -128,3 +128,43 @@ def getdf(file_path, dtype={"元品": str, "先品": str}):
         sheet_name: xls.parse(sheet_name, dtype=dtype) for sheet_name in xls.sheet_names
     }
     return df
+
+
+def compute_value_counts(df):
+    """
+    各列のユニークな値とその頻度を計算する関数。
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        処理するデータフレーム。
+
+    Returns
+    -------
+    value_counts_df : pandas.DataFrame
+        各列のユニークな値とその頻度を持つデータフレーム。
+        'column_name'列には対象の列名、'value'列にはユニークな値、'count'列にはその頻度が格納されています。
+
+    Examples
+    --------
+    >>> df = pd.DataFrame({'A': [1, 2, 2, 3, 3, 3], 'B': ['a', 'a', 'b', 'b', 'b', 'c']})
+    >>> compute_value_counts(df)
+      value  count column_name
+    0     3      3          A
+    1     2      2          A
+    2     1      1          A
+    3     b      3          B
+    4     a      2          B
+    5     c      1          B
+    """
+    value_counts_list = []
+
+    for col in df.columns:
+        value_counts = df[col].value_counts().reset_index()
+        value_counts.columns = ["value", "count"]
+        value_counts["column_name"] = col
+        value_counts_list.append(value_counts)
+
+    value_counts_df = pd.concat(value_counts_list, ignore_index=True)
+
+    return value_counts_df
