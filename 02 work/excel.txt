@@ -1,0 +1,47 @@
+Sub ExtractLeftEightCharacters()
+    Dim rng As Range
+    Dim cell As Range
+
+    '選択範囲を取得
+    Set rng = Application.Selection
+
+    '各セルに対して処理を実行
+    For Each cell In rng
+        'セルの値を文字列に変換し、左から8文字を取得
+        cell.Value = Left(CStr(cell.Value), 8)
+    Next cell
+End Sub
+
+
+Sub ZeroPaddingToEightCharacters()
+    Dim rng As Range
+    Dim cell As Range
+
+    '選択範囲を取得
+    Set rng = Application.Selection
+
+    '各セルに対して処理を実行
+    For Each cell In rng
+        'セルの書式を文字列に設定
+        cell.NumberFormat = "@"
+        'セルの値を文字列に変換し、左側を0で埋めて8桁にする
+        cell.Value = Right("00000000" & CStr(cell.Value), 8)
+    Next cell
+End Sub
+
+
+Sub ZeroPaddingToElevenCharacters()
+    Dim rng As Range
+    Dim cell As Range
+
+    '選択範囲を取得
+    Set rng = Application.Selection
+
+    '各セルに対して処理を実行
+    For Each cell In rng
+        'セルの書式を文字列に設定
+        cell.NumberFormat = "@"
+        'セルの値を文字列に変換し、右側を0で埋めて11桁にする
+        cell.Value = Left(CStr(cell.Value) & "00000000000", 11)
+    Next cell
+End Sub
