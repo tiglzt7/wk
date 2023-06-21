@@ -45,3 +45,41 @@ Sub ZeroPaddingToElevenCharacters()
         cell.Value = Left(CStr(cell.Value) & "00000000000", 11)
     Next cell
 End Sub
+
+
+Sub CombineSelectedColumns()
+
+    ' 選択された範囲を取得
+    Dim rng As Range
+    Set rng = Selection
+
+    ' 最初の選択範囲の開始行を取得
+    Dim startRow As Long
+    startRow = rng.Areas(1).Row
+
+    ' 結果を格納する新しい列を作成
+    Dim resultCol As Range
+    Set resultCol = rng.Parent.Cells(startRow, rng.Parent.Columns.Count).End(xlToLeft).Offset(0, 1)
+
+    Dim rowIdx As Long
+    For rowIdx = 1 To rng.Rows.Count
+        Dim combinedValue As String
+        combinedValue = ""
+
+        ' 選択範囲の各領域に対してループを実行
+        Dim area As Range
+        For Each area In rng.Areas
+            
+            Dim colIdx As Long
+            For colIdx = 1 To area.Columns.Count
+                ' 選択された列の値を結合
+                combinedValue = combinedValue & area.Cells(rowIdx, colIdx).Value
+            Next colIdx
+
+        Next area
+
+        ' 結果を新しい列に書き込む
+        resultCol.Cells(rowIdx, 1).Value = combinedValue
+    Next rowIdx
+
+End Sub
