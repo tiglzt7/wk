@@ -83,3 +83,55 @@ Sub CombineSelectedColumns()
     Next rowIdx
 
 End Sub
+
+
+Sub RemoveDuplicatesWithCondition()
+
+    Dim ws As Worksheet
+    Dim rng As Range
+    Dim LastRow As Long
+    Dim i As Long
+    
+    Set ws = ActiveSheet
+    LastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row ' A列の最終行を探します。"A"をデータの開始地点に合わせて調整してください。
+
+    ' 一時的な列を作成します。ここではZ列を使用していますが、使用していない任意の列を選んでください。
+    ws.Range("Z1:Z" & LastRow).ClearContents ' 初めて使用する前に一時的な列をクリアします。
+    
+    For i = 2 To LastRow
+        If Application.WorksheetFunction.CountIf(ws.Range("A2:A" & LastRow), ws.Cells(i, "A").Value) > 1 And ws.Cells(i, "B").Value <> 1 Then
+            ' "A"は"先品"の列、"B"は"L1"の列に対応しています。このマクロの中で列指定を行う際は、これらの値を自分のデータに合わせて調整してください。
+            ws.Cells(i, "Z").Value = "DELETE" ' 一時的な列に"DELETE"のマークをつけます。
+        End If
+    Next i
+    
+    ' 一時的な列に基づいて行を削除します。
+    For i = LastRow To 2 Step -1
+        If ws.Cells(i, "Z").Value = "DELETE" Then
+            ws.Rows(i).Delete
+        End If
+    Next i
+
+    ' 一時的な列をクリアします。
+    ws.Range("Z1:Z" & LastRow).ClearContents
+
+End Sub
+
+
+Sub SplitCellsAtFirstSpace()
+    Dim rng As Range
+    Dim cell As Range
+    Dim txt As String
+    Dim splitText() As String
+
+    Set rng = Application.Selection
+
+    For Each cell In rng
+        txt = cell.Value
+        splitText = Split(txt, " ", 2)  '最初のスペースでテキストを分割
+        cell.Offset(0, 1).Value = splitText(0)  '分割された最初の部分を隣のセルに配置
+        If UBound(splitText) > 0 Then  '2つ以上の部分がある場合
+            cell.Offset(0, 2).Value = splitText(1)  '分割された2番目の部分をさらに隣のセルに配置
+        End If
+    Next cell
+End Sub

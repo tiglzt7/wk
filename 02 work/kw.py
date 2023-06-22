@@ -51,6 +51,27 @@ def get_file_path(file_type=None):
     return file_path
 
 
+def get_folder_path():
+    """
+    フォルダ選択ダイアログを表示し、ユーザーが選択したフォルダのパスを取得します。
+
+    Returns:
+        str or None: ユーザーが選択したフォルダのパス。フォルダが選択されなかった場合はNoneを返します。
+    """
+
+    _tk_instance()
+
+    # フォルダ選択ダイアログを表示し、選択したフォルダのパスを取得
+    folder_path = filedialog.askdirectory(initialdir="..", title="Select folder")
+
+    # フォルダが選択されていない場合はNoneを返す
+    if not folder_path:
+        print("フォルダが選択されていません")
+        return None
+
+    return folder_path
+
+
 # def save_file_path(defaultextension):
 #     _tk_instance()
 
@@ -82,6 +103,33 @@ def getdf_xlsx(file_path=None):
         sheet_name: xls.parse(sheet_name, dtype={"元品番": str, "先品番": str})
         for sheet_name in xls.sheet_names
     }
+
+    return dfs
+
+
+def getdf_xlsx_test(file_path=None):
+    """
+    指定されたxlsxファイルをpandas DataFrameに読み込みます。file_pathが指定されていない場合は、ファイル選択ダイアログが表示されます。
+
+    Args:
+        file_path (str, optional): xlsxファイルのパス。指定されていない場合、ファイル選択ダイアログが表示されます。
+
+    Returns:
+        dict: キーがシート名、値が各シートの内容を表すDataFrameの辞書。
+    """
+    # file_pathが指定されていない場合はファイル選択ダイアログを開く
+    if file_path is None:
+        file_path = get_file_path("xlsx")
+
+    # 選択されたファイルをpandasで読み込む。品番をゼロ埋めするためstrで読み込む。
+    xls = pd.ExcelFile(file_path)
+    dfs = {
+        sheet_name: xls.parse(sheet_name, dtype={"元品番": str, "先品番": str})
+        for sheet_name in xls.sheet_names
+    }
+
+    # 辞書のキー（シート名）の一覧をプリント
+    print(f"シート名の一覧: {list(dfs.keys())}")
 
     return dfs
 
@@ -168,3 +216,17 @@ def compute_value_counts(df):
     value_counts_df = pd.concat(value_counts_list, ignore_index=True)
 
     return value_counts_df
+
+
+# sheet_df_dict = {}  # シート名とデータフレームを関連付ける辞書
+
+
+def add_df_to_dict(sheet_name, df):
+    """
+    指定されたシート名とデータフレームを辞書に追加します。
+
+    Args:
+        sheet_name (str): シート名。
+        df (DataFrame): シート名に関連付けるデータフレーム。
+    """
+    sheet_df_dict[sheet_name] = df
