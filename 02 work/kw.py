@@ -230,3 +230,32 @@ def add_df_to_dict(sheet_name, df):
         df (DataFrame): シート名に関連付けるデータフレーム。
     """
     sheet_df_dict[sheet_name] = df
+
+
+import pandas as pd
+import networkx as nx
+import matplotlib.pyplot as plt
+
+# データの定義
+df = pd.DataFrame(
+    {
+        "変更元": ["a", "a", "b", "c", "c", "d", "d"],
+        "変更先": ["A", "D", "D", "B", "C", "D", "A"],
+    }
+)
+
+# グラフの初期化
+G = nx.from_pandas_edgelist(df, "変更元", "変更先", create_using=nx.DiGraph())
+
+# ネットワーク図の描画
+nx.draw(
+    G,
+    with_labels=True,
+    node_color="lightblue",
+    node_size=1500,
+    font_size=20,
+    arrows=True,
+)
+
+# 描画結果の表示
+plt.show()
