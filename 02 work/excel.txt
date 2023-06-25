@@ -123,15 +123,23 @@ Sub SplitCellsAtFirstSpace()
     Dim cell As Range
     Dim txt As String
     Dim splitText() As String
+    Dim ws As Worksheet
 
     Set rng = Application.Selection
+    Set ws = ActiveSheet
+
+    '新しい列を作成
+    ws.Columns(rng.Columns.Count + rng.Column).Insert Shift:=xlToRight
+    ws.Columns(rng.Columns.Count + rng.Column).Insert Shift:=xlToRight
 
     For Each cell In rng
-        txt = cell.Value
-        splitText = Split(txt, " ", 2)  '最初のスペースでテキストを分割
-        cell.Offset(0, 1).Value = splitText(0)  '分割された最初の部分を隣のセルに配置
-        If UBound(splitText) > 0 Then  '2つ以上の部分がある場合
-            cell.Offset(0, 2).Value = splitText(1)  '分割された2番目の部分をさらに隣のセルに配置
+        If Not IsEmpty(cell) Then
+            txt = cell.Value
+            splitText = Split(txt, " ", 2)  '最初のスペースでテキストを分割
+            ws.Cells(cell.Row, rng.Column + rng.Columns.Count).Value = splitText(0)  '分割された最初の部分を新しいセルに配置
+            If UBound(splitText) > 0 Then  '2つ以上の部分がある場合
+                ws.Cells(cell.Row, rng.Column + rng.Columns.Count + 1).Value = splitText(1)  '分割された2番目の部分をさらに新しいセルに配置
+            End If
         End If
     Next cell
 End Sub
