@@ -2,7 +2,12 @@ import os
 import numpy as np
 import pandas as pd
 import tkinter as tk
+import openpyxl
 from tkinter import filedialog
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.styles import Alignment
+from openpyxl.worksheet.table import Table, TableStyleInfo
 
 # シートネームがない時の辞書
 # ユニークな値を出すときNaNもカウントする
@@ -16,7 +21,7 @@ kw_dtype = {
     "先品番": str,
 }
 
-kw_encoding = "cp932"
+kw_encoding = None
 
 
 def _tk_instance():
@@ -223,13 +228,7 @@ def writedf_xlsx(df_dict):
             df.to_excel(writer, sheet_name=sheet_name, index=False)
 
 
-from openpyxl import Workbook
-from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.styles import Alignment
-from openpyxl.worksheet.table import Table, TableStyleInfo
-
-
-def writedf_xlsx(df_dict, column_angle=0, fit_columns=True, filter_on=True):
+def writedf_xlsx2(df_dict, column_angle=0, fit_columns=True, filter_on=True):
     """
     引数で指定された辞書に格納されたデータフレームを、指定されたExcelファイルに書き込みます。
 
@@ -251,6 +250,7 @@ def writedf_xlsx(df_dict, column_angle=0, fit_columns=True, filter_on=True):
     )
 
     for sheet_name, df in df_dict.items():
+        df.columns = df.columns.astype(str)  # 列見出しを文字列に変換
         wb = Workbook()
         ws = wb.active
         ws.title = sheet_name
@@ -289,6 +289,53 @@ def writedf_xlsx(df_dict, column_angle=0, fit_columns=True, filter_on=True):
                 ws.column_dimensions[column[0].column_letter].width = adjusted_width
 
         wb.save(file_name)
+
+
+def writedf_xlsx3(df_dict, angle=0, adjust_col_width=False, enable_filter=False):
+    """
+    引数で指定された辞書に格納されたデータフレームを、指定されたExcelファイルに書き込みます。
+
+    Args:
+        df_dict (dict): シート名をキーとし、対応するデータフレームを値とする辞書。
+        angle (int): カラムの文字列の方向の角度。デフォルトは0（水平）。
+        adjust_col_width (bool): 列の幅を値にフィットするかどうか。デフォルトはFalse。
+        enable_filter (bool): カラム（1行目）のフィルタをONにするかどうか。デフォルトはFalse。
+
+    Note:
+        辞書の各エントリーに対応するExcelのシートが作成され、そのシートに対応するデータフレームのデータが書き込まれます。
+        すでに同名のシートが存在する場合は、そのシートは上書きされます。
+        また、データフレームのインデックスはExcelに書き込まれません。
+    """
+    _tk_instance()
+
+    file_name = filedialog.asksaveasfilename(
+        initialdir="..", title="Save as", defaultextension="xlsx"
+    )
+
+    with pd.ExcelWriter(file_name, engine="openpyxl") as writer:
+        for sheet_name, df in df_dict.items():
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+            if angle != 0 or adjust_col_width or enable_filter:
+                # Load workbook
+                workbook = writer.book
+                worksheet = writer.sheets[sheet_name]
+
+                if enable_filter:
+                    worksheet.auto_filter.ref = worksheet.dimensions
+
+                for idx, column in enumerate(df.columns, start=1):
+                    cell = worksheet.cell(row=1, column=idx)
+                    if angle != 0:
+                        cell.alignment = openpyxl.styles.Alignment(textRotation=angle)
+
+                    if adjust_col_width:
+                        column_width = max(
+                            (len(str(cell_value)) for cell_value in df[column])
+                        )
+                        worksheet.column_dimensions[
+                            openpyxl.utils.get_column_letter(idx)
+                        ].width = column_width
 
 
 def csv_to_xlsx():
@@ -398,30 +445,30 @@ def compute_value_counts(df):
 #     sheet_df_dict[sheet_name] = df
 
 
-import pandas as pd
-import networkx as nx
-import matplotlib.pyplot as plt
+# import pandas as pd
+# import networkx as nx
+# import matplotlib.pyplot as plt
 
-# データの定義
-df = pd.DataFrame(
-    {
-        "変更元": ["a", "a", "b", "c", "c", "d", "d"],
-        "変更先": ["A", "D", "D", "B", "C", "D", "A"],
-    }
-)
+# # データの定義
+# df = pd.DataFrame(
+#     {
+#         "変更元": ["a", "a", "b", "c", "c", "d", "d"],
+#         "変更先": ["A", "D", "D", "B", "C", "D", "A"],
+#     }
+# )
 
-# グラフの初期化
-G = nx.from_pandas_edgelist(df, "変更元", "変更先", create_using=nx.DiGraph())
+# # グラフの初期化
+# G = nx.from_pandas_edgelist(df, "変更元", "変更先", create_using=nx.DiGraph())
 
-# ネットワーク図の描画
-nx.draw(
-    G,
-    with_labels=True,
-    node_color="lightblue",
-    node_size=1500,
-    font_size=20,
-    arrows=True,
-)
+# # ネットワーク図の描画
+# nx.draw(
+#     G,
+#     with_labels=True,
+#     node_color="lightblue",
+#     node_size=1500,
+#     font_size=20,
+#     arrows=True,
+# )
 
-# 描画結果の表示
-plt.show()
+# # 描画結果の表示
+# plt.show()
