@@ -143,3 +143,127 @@ Sub SplitCellsAtFirstSpace()
         End If
     Next cell
 End Sub
+
+
+Sub FillFirstRow()
+
+    ' 列名を配列として定義
+    Dim colNames As Variant
+    colNames = Array("列1", _
+                     "列2", _
+                     "列3", _
+                     "列4", _
+                     "列5", _
+                     "列6", _
+                     "列7", _
+                     "列8", _
+                     "列9", _
+                     "列10")
+    
+    ' 1行目の各列に値を設定
+    Dim i As Integer
+    For i = 1 To 10
+        Cells(1, i).Value = colNames(i - 1)
+    Next i
+
+End Sub
+
+
+Sub ShowUserForm()
+    UserForm1.Show  ' UserForm1は実際のユーザーフォーム名に置き換えてください
+End Sub
+
+
+仮
+
+Private Sub UserForm_Initialize()
+
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Sheet1") '適切なワークシート名に変更してください
+    Dim c As Range
+
+    ' 1行目の全てのカラムを走査し、カラム名をリストボックスに追加
+    For Each c In ws.Range("1:1").Cells
+        If c.Value <> "" Then
+            ListBox1.AddItem c.Value
+        End If
+    Next c
+
+End Sub
+
+
+
+
+
+
+
+
+Private Sub ListBox1_Click()
+
+End Sub
+
+Private Sub UserForm_Initialize()
+
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Sheet1") '適切なワークシート名に変更してください
+    Dim c As Range
+
+    ' 1行目の全てのカラムを走査し、カラム名をリストボックスに追加
+    For Each c In ws.Range("1:1").Cells
+        If c.Value <> "" Then
+            ListBox1.AddItem c.Value
+        End If
+    Next c
+
+End Sub
+
+Private Sub CommandButton1_Click()
+
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Sheet1") '適切なワークシート名に変更してください
+    Dim i As Integer
+    Dim keepColumns() As String
+    Dim colName As String
+
+    ' 選択されたカラム名を配列に格納
+    Dim selectedIndex As Integer
+    selectedIndex = 0
+    For i = 0 To ListBox1.ListCount - 1
+        If ListBox1.Selected(i) Then
+            selectedIndex = selectedIndex + 1
+        End If
+    Next i
+    
+    ' 選択された要素がない場合にはエラーメッセージを表示して終了
+    If selectedIndex = 0 Then
+        MsgBox "少なくとも1つの列を選択してください。", vbInformation
+        Exit Sub
+    End If
+    
+    ReDim keepColumns(0 To selectedIndex - 1)
+    selectedIndex = 0
+    For i = 0 To ListBox1.ListCount - 1
+        If ListBox1.Selected(i) Then
+            keepColumns(selectedIndex) = ListBox1.List(i)
+            selectedIndex = selectedIndex + 1
+        End If
+    Next i
+
+    ' 1行目の全てのカラムを走査し、選択されていないカラムを削除
+    For i = ws.Cells(1, Columns.count).End(xlToLeft).Column To 1 Step -1
+        colName = ws.Cells(1, i).Value
+        If Not IsInArray(colName, keepColumns) Then
+            ws.Columns(i).Delete
+        End If
+    Next i
+
+    ' ユーザーフォームを閉じる
+    Unload Me
+
+End Sub
+
+' 配列内に特定の値が存在するかチェックする関数
+Function IsInArray(valToBeFound As Variant, arr As Variant) As Boolean
+    IsInArray = (UBound(Filter(arr, valToBeFound)) > -1)
+End Function
+

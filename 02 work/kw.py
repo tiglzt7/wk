@@ -377,3 +377,65 @@ def csv_to_excel(output_file_name="output.xlsx"):
                     encoding=kw_encoding,
                 )
                 df.excel(writer, sheet_name=os.path.splitext(filename)[0], index=False)
+
+
+import os
+import shutil
+import pandas as pd
+
+# CSVファイルとそのカラム名、ソースとターゲットのディレクトリパス、ファイルの拡張子を定義します。
+csv_file = "file_list.csv"
+column_name = "file_names"
+src_dir = r"\\network_path\source_folder"  # ソースフォルダ
+dst_dir = r"\\network_path\target_folder"  # ターゲットフォルダ
+extension = ".txt"  # 例として'.txt'を使用しますが、ここは適宜変更してください。
+
+# CSVファイルを読み込みます。
+df = pd.read_csv(csv_file)
+
+# 指定のカラムの値を持つファイルをコピーします。
+for index, row in df.iterrows():
+    file_name = row[column_name]
+    src_file = os.path.join(src_dir, file_name + extension)
+    dst_file = os.path.join(dst_dir, file_name + extension)
+    if os.path.exists(src_file):
+        shutil.copy(src_file, dst_file)
+    else:
+        print(f"File not found: {src_file}")
+
+
+import os
+import shutil
+import pandas as pd
+
+
+def copy_files_in_dir(src_dir, dst_dir, depth, max_depth, column_values, extension):
+    if depth > max_depth:
+        return
+
+    for item in os.listdir(src_dir):
+        s = os.path.join(src_dir, item)
+        d = os.path.join(dst_dir, item)
+        if os.path.isdir(s):
+            copy_files_in_dir(
+                s, dst_dir, depth + 1, max_depth, column_values, extension
+            )
+        elif os.path.isfile(s) and item.rsplit(".", 1)[0] in column_values:
+            if not os.path.exists(dst_dir):
+                os.makedirs(dst_dir)
+            shutil.copy2(s, d)
+
+
+# CSVファイルとそのカラム名、ソースとターゲットのディレクトリパス、ファイルの拡張子を定義します。
+csv_file = "file_list.csv"
+column_name = "file_names"
+src_dir = r"\\network_path\source_folder"  # ソースフォルダ
+dst_dir = r"\\network_path\target_folder"  # ターゲットフォルダ
+extension = ".txt"  # 例として'.txt'を使用しますが、ここは適宜変更してください。
+max_depth = 2  # 最大探索深度を定義します。ここは適宜変更してください。
+
+# CSVファイルを読み込みます。
+df = pd.read_csv(csv_file)
+column_values = set(df[column_name].values)
+
+copy_files_in_dir(src_dir, dst_dir, 0, max_depth, column_values, extension)
