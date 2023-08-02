@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import filedialog
 import matplotlib.pyplot as plt
 import seaborn as sns
+import itertools
 import kw
 
 
@@ -247,6 +248,229 @@ def draw_plot2(
 
         # すべてのモデルについてループが終わった後に、このサブプロットのxlimを設定
         ax.set_xlim(0, x_max + x_max * 0.05)
+
+    # 使用しないサブプロットを削除
+    for j in range(i + 1, num_rows * num_cols):
+        fig.delaxes(axs[j])
+
+    fig.tight_layout()
+    plt.show()
+
+
+# カラー
+def draw_plot3(
+    df,
+    selected_models,
+    x_axis=x_axis,
+    X_axis_unit=x_axis_unit,
+    y_axes=[y_axis1, y_axis2, y_axis3],
+    y_axis_units=[y_axis_unit1, y_axis_unit2, y_axis_unit3],
+    y_axis_lims=[(0, None), (0, None), (0, None)],
+    types_of_plot=["scatter", "polyfit"],
+    polyfit_degree=5,
+    num_rows=2,
+):
+    # モデル毎の色を指定
+    model_colors = itertools.cycle(["k", "r", "b"])
+
+    # 軸毎の色を指定
+    axis_colors = ["k", "k", "k"]
+
+    # モデルの数に基づいてサブプロットの列数を計算
+    num_cols = len(selected_models) // num_rows
+    if len(selected_models) % num_rows != 0:  # モデルの数が行数で割り切れない場合
+        num_cols += 1  # 列数を1つ増やす
+
+    # Figureとarray of axesを作成
+    fig, axs = plt.subplots(
+        num_rows, num_cols, figsize=(8 * num_cols, 6 * num_rows), squeeze=False
+    )
+    axs = axs.flatten()
+
+    for i, models in enumerate(selected_models):
+        color_index = 0  # ここでcolor_indexをリセット
+        x_max = 0  # x_maxを初期化
+        for model in models:
+            color = next(model_colors)  # cycleから次の色を選択
+            color_index += 1
+
+            df_model = df[df["model"] == model]
+
+            # 現在のモデルに対するxの最大値を取得
+            x_max_model = df_model[x_axis].max()
+
+            # これが現在のx_maxより大きければ、x_maxを更新
+            if x_max_model > x_max:
+                x_max = x_max_model
+
+            # 現在のaxesを選択
+            ax = axs[i]
+            ax.set_xlabel(f"{x_axis} ({X_axis_unit})")
+            ax.grid(True)
+
+            # 複数のy軸をプロット
+            for j, y_axis in enumerate(y_axes):
+                y_axis_unit = y_axis_units[j]
+                y_axis_lim = y_axis_lims[j]
+
+                if j > 0:  # 2つ目以降のy軸の場合、新しいAxesを作成
+                    ax = ax.twinx()
+
+                    # Y軸の位置を調整
+                    ax.spines["left"].set_position(("axes", -0.1 * j))  # 軸の位置を調整
+                    ax.yaxis.set_label_position("left")  # ラベルの位置を調整
+                    ax.yaxis.set_ticks_position("left")  # ティックの位置を調整
+
+                ax.set_ylabel(f"{y_axis} ({y_axis_unit})", color=axis_colors[j])
+                ax.set_ylim(y_axis_lim)
+
+                # データ点のプロット
+                if "scatter" in types_of_plot:
+                    ax.scatter(df_model[x_axis], df_model[y_axis], color=color)
+
+                # Polyfit
+                if "polyfit" in types_of_plot:
+                    poly_coeffs = polyfit(
+                        df_model[x_axis], df_model[y_axis], deg=polyfit_degree
+                    )
+                    poly = poly1d(poly_coeffs)
+                    xs = np.linspace(
+                        df_model[x_axis].min(), df_model[x_axis].max(), 500
+                    )
+                    ax.plot(xs, poly(xs), color=color, label=model)
+
+                # スプライン補間
+                if "spline" in types_of_plot:
+                    tck = splrep(df_model[x_axis], df_model[y_axis], k=3)
+                    xs = np.linspace(
+                        df_model[x_axis].min(), df_model[x_axis].max(), 500
+                    )
+                    ys = splev(xs, tck)
+                    ax.plot(xs, ys, color=color, label=model)
+
+                ax.tick_params(axis="y", labelcolor=axis_colors[j])
+                ax.legend(loc="best")
+
+            ax.set_title(f'Models: {", ".join(models)}')
+
+        # すべてのモデルについてループが終わった後に、このサブプロットのxlimを設定
+        ax.set_xlim(0, x_max + x_max * 0.05)
+
+    # 使用しないサブプロットを削除
+    for j in range(i + 1, num_rows * num_cols):
+        fig.delaxes(axs[j])
+
+    fig.tight_layout()
+    plt.show()
+
+
+import itertools
+import numpy as np
+import matplotlib.pyplot as plt
+from numpy.polynomial.polynomial import polyfit
+from scipy.interpolate import splrep, splev
+from numpy import poly1d
+
+
+# タイトル
+def draw_plot4(
+    df,
+    selected_models,
+    x_axis=x_axis,
+    X_axis_unit=x_axis_unit,
+    y_axes=[y_axis1, y_axis2, y_axis3],
+    y_axis_units=[y_axis_unit1, y_axis_unit2, y_axis_unit3],
+    y_axis_lims=[(0, None), (0, None), (0, None)],
+    types_of_plot=["scatter", "polyfit"],
+    polyfit_degree=5,
+    num_rows=2,
+):
+    # モデル毎の色を指定
+    model_colors = itertools.cycle(["k", "r", "b"])  # cycleで無限リストを生成
+
+    # 軸毎の色を指定
+    axis_colors = ["k", "k", "k"]
+
+    # モデルの数に基づいてサブプロットの列数を計算
+    num_cols = len(selected_models) // num_rows
+    if len(selected_models) % num_rows != 0:  # モデルの数が行数で割り切れない場合
+        num_cols += 1  # 列数を1つ増やす
+
+    # Figureとarray of axesを作成
+    fig, axs = plt.subplots(num_rows, num_cols, figsize=(8 * num_cols, 6 * num_rows))
+    axs = axs.ravel()
+
+    for i, models in enumerate(selected_models):
+        x_max = 0  # x_maxを初期化
+
+        for model in models:
+            color = next(model_colors)  # cycleから次の色を選択
+
+            df_model = df[df["model"] == model]
+
+            # 現在のモデルに対するxの最大値を取得
+            x_max_model = df_model[x_axis].max()
+
+            # これが現在のx_maxより大きければ、x_maxを更新
+            if x_max_model > x_max:
+                x_max = x_max_model
+
+            # 現在のaxesを選択
+            ax = axs[i]
+            ax.set_xlabel(f"{x_axis} ({X_axis_unit})")
+            ax.grid(True)
+
+            # 複数のy軸をプロット
+            for j, y_axis in enumerate(y_axes):
+                y_axis_unit = y_axis_units[j]
+                y_axis_lim = y_axis_lims[j]
+
+                if j > 0:  # 2つ目以降のy軸の場合、新しいAxesを作成
+                    ax = ax.twinx()
+
+                    # Y軸の位置を調整
+                    ax.spines["left"].set_position(("axes", -0.1 * j))  # 軸の位置を調整
+                    ax.yaxis.set_label_position("left")  # ラベルの位置を調整
+                    ax.yaxis.set_ticks_position("left")  # ティックの位置を調整
+
+                ax.set_ylabel(f"{y_axis} ({y_axis_unit})", color=axis_colors[j])
+                ax.set_ylim(y_axis_lim)
+
+                # データ点のプロット
+                if "scatter" in types_of_plot:
+                    ax.scatter(df_model[x_axis], df_model[y_axis], color=color)
+
+                # Polyfit
+                if "polyfit" in types_of_plot:
+                    poly_coeffs = polyfit(
+                        df_model[x_axis], df_model[y_axis], deg=polyfit_degree
+                    )
+                    poly = poly1d(poly_coeffs)
+                    xs = np.linspace(
+                        df_model[x_axis].min(), df_model[x_axis].max(), 500
+                    )
+                    ax.plot(xs, poly(xs), color=color, label=model)
+
+                # スプライン補間
+                if "spline" in types_of_plot:
+                    tck = splrep(df_model[x_axis], df_model[y_axis], k=3)
+                    xs = np.linspace(
+                        df_model[x_axis].min(), df_model[x_axis].max(), 500
+                    )
+                    ys = splev(xs, tck)
+                    ax.plot(xs, ys, color=color, label=model)
+
+                ax.tick_params(axis="y", labelcolor=axis_colors[j])
+                ax.legend(loc="best")
+
+        # すべてのモデルについてループが終わった後に、このサブプロットのxlimを設定
+        ax.set_xlim(0, x_max + x_max * 0.05)
+
+        # モデルの数が多い場合、タイトルを簡略化
+        if len(models) > 5:  # 5はタイトルが長くなりすぎると判断するモデル数の閾値
+            ax.set_title(f"Number of Models: {len(models)}")
+        else:
+            ax.set_title(f'Models: {", ".join(models)}')
 
     # 使用しないサブプロットを削除
     for j in range(i + 1, num_rows * num_cols):
