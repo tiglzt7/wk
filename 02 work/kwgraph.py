@@ -411,92 +411,180 @@ def draw_plot4c(
     plt.show()
 
 
-def initialize_subplots(selected_models, num_rows):
-    """サブプロットを初期化する関数"""
-    num_cols = len(selected_models) // num_rows
-    if len(selected_models) % num_rows != 0:
-        num_cols += 1
-    fig, axs = plt.subplots(num_rows, num_cols, figsize=(8 * num_cols, 6 * num_rows))
-    return fig, axs.ravel()
-
-
-def plot_for_model(
-    ax,
-    df,
-    model,
-    x_axis,
-    X_axis_unit,
-    y_axes,
-    y_axis_units,
-    y_axis_lims,
-    types_of_plot,
-    polyfit_degree,
-    colormap,
-    use_colormap,
-):
-    """指定されたモデルのためのプロットを生成する関数"""
-    # 以前のコードのプロットに関する部分をここに移動...
-
-
-def set_subplot_title(ax, models):
-    if len(models) > 5:
-        ax.set_title(f"Number of Models: {len(models)}")
-    else:
-        ax.set_title(f'Models: {", ".join(models)}')
-
-
-def create_subplot(num_rows, num_cols):
-    fig, axs = plt.subplots(num_rows, num_cols, figsize=(8 * num_cols, 6 * num_rows))
-    return fig, axs.ravel()
-
-
-def configure_axis(
-    ax, x_axis, X_axis_unit, y_axis, y_axis_unit, y_axis_lim, axis_color
-):
-    ax.set_xlabel(f"{x_axis} ({X_axis_unit})")
-    ax.grid(True)
-    ax.set_ylabel(f"{y_axis} ({y_axis_unit})", color=axis_color)
-    ax.set_ylim(y_axis_lim)
-
-
-import itertools
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+import itertools
+from matplotlib import cm
 from scipy.interpolate import splrep, splev
-from numpy.polynomial.polynomial import polyfit
 
 
-def plot_scatter(ax, df_model, x_axis, y_axis, color):
-    ax.scatter(df_model[x_axis], df_model[y_axis], color=color)
+def draw_plot4d(
+    df,
+    selected_models,
+    x_axis=x_axis,
+    X_axis_unit=x_axis_unit,
+    y_axes=[y_axis1, y_axis2, y_axis3],
+    y_axis_units=[y_axis_unit1, y_axis_unit2, y_axis_unit3],
+    y_axis_lims=[(0, None), (0, None), (0, None)],
+    types_of_plot=["scatter", "polyfit"],
+    polyfit_degree=5,
+    num_rows=2,
+    colormap="jet",
+    use_colormap=True,
+    linestyles=["-", "--", "-.", ":"],
+    markers=["o", "s", "^", "v"],
+):
+    """
+    複数のモデルと複数のy軸でのデータを表示するプロットを生成する関数。
 
+    Parameters:
+    - df: データフレーム (pandas DataFrame)
+    - selected_models: 各サブプロットで表示するモデルのリストのリスト
+    - x_axis: x軸のデータのカラム名
+    - X_axis_unit: x軸の単位の文字列
+    - y_axes: y軸のデータのカラム名のリスト
+    - y_axis_units: y軸の単位のリスト
+    - y_axis_lims: y軸の限界値のリスト (tuple形式)
+    - types_of_plot: 使用するプロットのタイプ ("scatter", "polyfit" など)
+    - polyfit_degree: polyfitの次数 (整数)
+    - num_rows: サブプロットの行数
+    - colormap: 使用するカラーマップの名前
+    - use_colormap: カラーマップを使用するかどうかのブール値
 
-def plot_polyfit(ax, df_model, x_axis, y_axis, color, polyfit_degree=5):
-    poly_coeffs = polyfit(df_model[x_axis], df_model[y_axis], deg=polyfit_degree)
-    poly = np.poly1d(poly_coeffs)
-    xs = np.linspace(df_model[x_axis].min(), df_model[x_axis].max(), 500)
-    ax.plot(xs, poly(xs), color=color)
+    Returns:
+    - None (直接プロットが表示される)
+    """
 
+    # df が期待するカラムを持っているかのチェック
+    required_columns = [x_axis] + y_axes + ["model"]
+    for col in required_columns:
+        if col not in df.columns:
+            raise ValueError(f"Expected column '{col}' not found in dataframe.")
 
-def plot_spline(ax, df_model, x_axis, y_axis, color):
-    tck = splrep(df_model[x_axis], df_model[y_axis], k=3)
-    xs = np.linspace(df_model[x_axis].min(), df_model[x_axis].max(), 500)
-    ys = splev(xs, tck)
-    ax.plot(xs, ys, color=color)
+    # selected_models の形式チェック
+    if not all(isinstance(models, list) for models in selected_models):
+        raise TypeError("'selected_models' should be a list of lists.")
+    if not all(
+        isinstance(model, str) for sublist in selected_models for model in sublist
+    ):
+        raise TypeError("All models in 'selected_models' should be strings.")
 
+    # types_of_plot の形式チェック
+    valid_plot_types = ["scatter", "polyfit", "spline"]
+    for plot_type in types_of_plot:
+        if plot_type not in valid_plot_types:
+            raise ValueError(
+                f"Unknown plot type '{plot_type}'. Supported types are {', '.join(valid_plot_types)}."
+            )
 
-def plot_scatter(ax, df_model, x_axis, y_axis, color):
-    ax.scatter(df_model[x_axis], df_model[y_axis], color=color)
+    def calculate_num_cols(selected_models, num_rows):
+        """Calculate the number of columns for subplots."""
+        cols = len(selected_models) // num_rows
+        return cols + 1 if len(selected_models) % num_rows else cols
 
+    def get_model_style_maps(models):
+        """Return style maps for given models."""
+        model_color_map, model_linestyle_map, model_marker_map = {}, {}, {}
 
-def plot_polyfit(ax, df_model, x_axis, y_axis, color, polyfit_degree=5):
-    poly_coeffs = polyfit(df_model[x_axis], df_model[y_axis], deg=polyfit_degree)
-    poly = np.poly1d(poly_coeffs)
-    xs = np.linspace(df_model[x_axis].min(), df_model[x_axis].max(), 500)
-    ax.plot(xs, poly(xs), color=color)
+        model_colors = (
+            [cm.get_cmap(colormap, len(models))(i) for i in range(len(models))]
+            if use_colormap
+            else itertools.cycle(["k", "r", "b"])
+        )
+        model_linestyles = itertools.cycle(linestyles)
+        model_markers = itertools.cycle(markers)
 
+        for model in models:
+            model_color_map[model] = next(model_colors)
+            model_linestyle_map[model] = next(model_linestyles)
+            model_marker_map[model] = next(model_markers)
 
-def plot_spline(ax, df_model, x_axis, y_axis, color):
-    tck = splrep(df_model[x_axis], df_model[y_axis], k=3)
-    xs = np.linspace(df_model[x_axis].min(), df_model[x_axis].max(), 500)
-    ys = splev(xs, tck)
-    ax.plot(xs, ys, color=color)
+        return model_color_map, model_linestyle_map, model_marker_map
+
+    num_cols = calculate_num_cols(selected_models, num_rows)
+
+    fig, axs = plt.subplots(num_rows, num_cols, figsize=(8 * num_cols, 6 * num_rows))
+    axs = axs.ravel()
+
+    for i, models in enumerate(selected_models):
+        model_color_map, model_linestyle_map, model_marker_map = get_model_style_maps(
+            models
+        )
+        ax = axs[i]
+        x_max = df[df["model"].isin(models)][x_axis].max()
+
+        for j, y_axis in enumerate(y_axes):
+            y_unit = y_axis_units[j]
+            ax = ax if j == 0 else ax.twinx()
+
+            if j > 0:
+                ax.spines["left"].set_position(("axes", -0.1 * j))
+                ax.yaxis.set_label_position("left")
+                ax.yaxis.set_ticks_position("left")
+
+            ax.set_ylabel(f"{y_axis} ({y_unit})", color="k")
+            ax.set_ylim(y_axis_lims[j])
+
+            for model in models:
+                df_model = df[df["model"] == model]
+
+                if "scatter" in types_of_plot:
+                    ax.scatter(
+                        df_model[x_axis],
+                        df_model[y_axis],
+                        color=model_color_map[model],
+                        marker=model_marker_map[model],
+                    )
+
+                if "polyfit" in types_of_plot:
+                    poly_coeffs = np.polyfit(
+                        df_model[x_axis], df_model[y_axis], polyfit_degree
+                    )
+                    poly = np.poly1d(poly_coeffs)
+                    xs = np.linspace(0, x_max, 500)
+                    ax.plot(
+                        xs,
+                        poly(xs),
+                        color=model_color_map[model],
+                        linestyle=model_linestyle_map[model],
+                    )
+
+                if "spline" in types_of_plot:
+                    tck = splrep(df_model[x_axis], df_model[y_axis], k=3)
+                    xs = np.linspace(0, x_max, 500)
+                    ys = splev(xs, tck)
+                    ax.plot(
+                        xs,
+                        ys,
+                        color=model_color_map[model],
+                        linestyle=model_linestyle_map[model],
+                    )
+
+            handles = [
+                Line2D(
+                    [0],
+                    [0],
+                    color=model_color_map[model],
+                    linestyle=model_linestyle_map[model],
+                    marker=model_marker_map[model],
+                    lw=2,
+                )
+                for model in models
+            ]
+            labels = models
+            ax.legend(handles, labels, loc="best")
+
+            ax.set_xlim(0, x_max + 0.05 * x_max)
+
+        ax.set_title(
+            f'Models: {", ".join(models)}'
+            if len(models) <= 5
+            else f"Number of Models: {len(models)}"
+        )
+
+    for j in range(i + 1, num_rows * num_cols):
+        fig.delaxes(axs[j])
+
+    fig.tight_layout()
+    plt.show()
