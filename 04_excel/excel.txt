@@ -192,3 +192,102 @@ Dim i As Long
 End Sub
 
 
+Sub ListFilesAndCheckNamesAgainstSelection()
+    Dim objFSO As Object
+    Dim objFolder As Object
+    Dim objFile As Object
+    Dim outputSheet As Worksheet
+    Dim i As Integer
+    Dim strFolderPath As String
+    Dim cell As Range
+    Dim selectedCells As Range
+    Dim fileName As String
+    Dim containsSelectedValue As Boolean
+
+    ' 現在選択されているセルの範囲を取得
+    Set selectedCells = Selection
+
+    ' 選択されたセルの範囲から空白セルを除外
+    Set selectedCells = RemoveBlankCells(selectedCells)
+
+    ' フォルダ選択ダイアログを表示
+    With Application.FileDialog(msoFileDialogFolderPicker)
+        If .Show = -1 Then ' ユーザーがOKを選択した場合
+            strFolderPath = .SelectedItems(1)
+        Else
+            ' ユーザーがキャンセルした場合はメッセージを表示してマクロを終了
+            MsgBox "フォルダが選択されませんでした。", vbExclamation
+            Exit Sub
+        End If
+    End With
+
+    ' 新しいシートを作成
+    Set outputSheet = Worksheets.Add
+    outputSheet.Name = "ファイルリスト"
+
+    ' FileSystemObjectを作成
+    Set objFSO = CreateObject("Scripting.FileSystemObject")
+    Set objFolder = objFSO.GetFolder(strFolderPath)
+    
+    ' ヘッダーを追加
+    With outputSheet
+        .Cells(1, 1).Value = "フルパス"
+        .Cells(1, 2).Value = "ファイル名"
+        .Cells(1, 3).Value = "拡張子"
+        .Cells(1, 4).Value = "含まれているか"
+    End With
+
+    ' ファイル一覧を取得し、新しいシートに情報を出力
+    i = 2 ' ヘッダーの次の行から開始
+    For Each objFile In objFolder.Files
+        fileName = objFSO.GetBaseName(objFile) ' ファイル名（拡張子なし）
+        containsSelectedValue = False
+        
+        ' 選択されたセルにファイル名が含まれているかチェック
+        For Each cell In selectedCells
+            If InStr(1, fileName, cell.Value, vbTextCompare) > 0 Then
+                containsSelectedValue = True
+                Exit For
+            End If
+        Next cell
+        
+        ' 新しいシートに情報を出力
+        With outputSheet
+            .Cells(i, 1).Value = objFile.Path ' フルパス
+            .Cells(i, 2).Value = fileName ' ファイル名
+            .Cells(i, 3).Value = objFSO.GetExtensionName(objFile.Path) ' 拡張子
+            .Cells(i, 4).Value = containsSelectedValue ' 含まれているか
+        End With
+        
+        i = i + 1
+    Next objFile
+
+    ' オブジェクトの解放
+    Set objFSO = Nothing
+    Set objFolder = Nothing
+    Set objFile = Nothing
+    Set selectedCells = Nothing
+    
+    ' 結果シートをアクティブにする
+    outputSheet.Select
+
+    ' 完了メッセージ
+    MsgBox i - 1 & " 個のファイルを新しいシートにリストアップしました。", vbInformation
+End Sub
+
+' 空白のセルを含まないセルの範囲を返す関数
+Function RemoveBlankCells(rng As Range) As Range
+    Dim cell As Range
+    Dim tempRange As Range
+    For Each cell In rng
+        If cell.Value <> "" Then
+            If tempRange Is Nothing Then
+                Set tempRange = cell
+            Else
+                Set tempRange = Union(tempRange, cell)
+            End If
+        End If
+    Next cell
+    Set RemoveBlankCells = tempRange
+End Function
+
