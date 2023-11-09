@@ -195,40 +195,37 @@ End Sub
 Sub ListFilesAndCheckNamesAgainstSelection()
     Dim objFSO As Object
     Dim objFolder As Object
-    Dim objFile As Object
     Dim outputSheet As Worksheet
     Dim i As Integer
     Dim strFolderPath As String
-    Dim cell As Range
     Dim selectedCells As Range
-    Dim fileName As String
-    Dim containsSelectedValue As Boolean
+    Dim maxDepth As Integer
 
-    ' 現在選択されているセルの範囲を取得
+    ' 選択されたセルの範囲を取得
     Set selectedCells = Selection
-
-    ' 選択されたセルの範囲から空白セルを除外
     Set selectedCells = RemoveBlankCells(selectedCells)
 
     ' フォルダ選択ダイアログを表示
     With Application.FileDialog(msoFileDialogFolderPicker)
-        If .Show = -1 Then ' ユーザーがOKを選択した場合
+        If .Show = -1 Then
             strFolderPath = .SelectedItems(1)
         Else
-            ' ユーザーがキャンセルした場合はメッセージを表示してマクロを終了
             MsgBox "フォルダが選択されませんでした。", vbExclamation
             Exit Sub
         End If
     End With
 
+    ' 探索する階層の深さをユーザーに尋ねる
+    maxDepth = InputBox("何階層下まで探索しますか？", "探索階層の指定", 1)
+    If Not IsNumeric(maxDepth) Or maxDepth < 0 Then
+        MsgBox "正しい階層の深さを入力してください。", vbExclamation
+        Exit Sub
+    End If
+
     ' 新しいシートを作成
     Set outputSheet = Worksheets.Add
     outputSheet.Name = "ファイルリスト"
 
-    ' FileSystemObjectを作成
-    Set objFSO = CreateObject("Scripting.FileSystemObject")
-    Set objFolder = objFSO.GetFolder(strFolderPath)
-    
     ' ヘッダーを追加
     With outputSheet
         .Cells(1, 1).Value = "フルパス"
@@ -237,45 +234,28 @@ Sub ListFilesAndCheckNamesAgainstSelection()
         .Cells(1, 4).Value = "含まれているか"
     End With
 
-    ' ファイル一覧を取得し、新しいシートに情報を出力
+    ' FileSystemObjectを作成してフォルダを取得
+    Set objFSO = CreateObject("Scripting.FileSystemObject")
+    Set objFolder = objFSO.GetFolder(strFolderPath)
+
+    ' ファイル一覧を取得してチェックを開始
     i = 2 ' ヘッダーの次の行から開始
-    For Each objFile In objFolder.Files
-        fileName = objFSO.GetBaseName(objFile) ' ファイル名（拡張子なし）
-        containsSelectedValue = False
-        
-        ' 選択されたセルにファイル名が含まれているかチェック
-        For Each cell In selectedCells
-            If InStr(1, fileName, cell.Value, vbTextCompare) > 0 Then
-                containsSelectedValue = True
-                Exit For
-            End If
-        Next cell
-        
-        ' 新しいシートに情報を出力
-        With outputSheet
-            .Cells(i, 1).Value = objFile.Path ' フルパス
-            .Cells(i, 2).Value = fileName ' ファイル名
-            .Cells(i, 3).Value = objFSO.GetExtensionName(objFile.Path) ' 拡張子
-            .Cells(i, 4).Value = containsSelectedValue ' 含まれているか
-        End With
-        
-        i = i + 1
-    Next objFile
+    ListFiles objFolder, selectedCells, outputSheet, i, maxDepth, 0
+
+    ' 結果シートをアクティブにする
+    outputSheet.Activate
+
+    ' 完了メッセージ
+    MsgBox i - 2 & " 個のファイルを新しいシートにリストアップしました。", vbInformation
 
     ' オブジェクトの解放
     Set objFSO = Nothing
     Set objFolder = Nothing
-    Set objFile = Nothing
+    Set outputSheet = Nothing
     Set selectedCells = Nothing
-    
-    ' 結果シートをアクティブにする
-    outputSheet.Select
-
-    ' 完了メッセージ
-    MsgBox i - 1 & " 個のファイルを新しいシートにリストアップしました。", vbInformation
 End Sub
 
-' 空白のセルを含まないセルの範囲を返す関数
+' 空白セルを除外する関数
 Function RemoveBlankCells(rng As Range) As Range
     Dim cell As Range
     Dim tempRange As Range
@@ -290,4 +270,51 @@ Function RemoveBlankCells(rng As Range) As Range
     Next cell
     Set RemoveBlankCells = tempRange
 End Function
+
+' フォルダとそのサブフォルダ内のファイルをリストアップする再帰関数
+Sub ListFiles(ByVal objFolder As Object, ByVal selectedCells As Range, ByRef outputSheet As Worksheet, ByRef i As Integer, ByVal maxDepth As Integer, ByVal currentDepth As Integer)
+    Dim objFSO As Object
+    Dim objSubFolder As Object
+    Dim objFile As Object
+    Dim fileName As String
+    Dim containsSelectedValue As Boolean
+    
+    Set objFSO = CreateObject("Scripting.FileSystemObject")
+    
+    ' 現在のフォルダ内のファイルを処理
+    For Each objFile In objFolder.Files
+        fileName = objFSO.GetBaseName(objFile)
+        containsSelectedValue = False
+        
+        ' 選択されたセルにファイル名が含まれているかチェック
+        For Each cell In selectedCells
+            If InStr(1, fileName, cell.Value, vbTextCompare) > 0 Then
+                containsSelectedValue = True
+                Exit For
+            End If
+        Next cell
+        
+        ' 新しいシートに情報を出力
+        With outputSheet
+            .Cells(i, 1).Value = objFile.Path ' フルパス
+            .Cells(i, 2).Value = fileName ' ファイル名
+            .Cells(i, 3).Value = objFSO.GetExtensionName(objFile) ' 拡張子
+            .Cells(i, 4).Value = containsSelectedValue ' 含まれているか
+        End With
+        
+        i = i + 1
+    Next objFile
+    
+    ' 指定された深さに達していなければ下位フォルダを探索
+    If currentDepth < maxDepth Then
+        For Each objSubFolder In objFolder.SubFolders
+            ListFiles objSubFolder, selectedCells, outputSheet, i, maxDepth, currentDepth + 1
+        Next objSubFolder
+    End If
+    
+    ' オブジェクトの解放
+    Set objFSO = Nothing
+End Sub
+
+
 
